@@ -1,0 +1,10 @@
+name = "MiniForth"
+version = "0.1.0"
+defaultTargets = ["miniforth"]
+
+[[lean_lib]]
+name = "MiniForth"
+
+[[lean_exe]]
+name = "miniforth"
+root = "Main"
