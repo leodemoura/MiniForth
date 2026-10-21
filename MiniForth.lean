@@ -11,3 +11,5 @@ import MiniForth.Divergence
 import MiniForth.Recursion
 import MiniForth.Examples
 import MiniForth.Conditionals
+import MiniForth.Grind
+import MiniForth.PrettyPrinterTests

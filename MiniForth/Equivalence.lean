@@ -115,7 +115,7 @@ theorem double_equiv : Equiv env [.prim .dup, .prim .add] [.push 2, .prim .mul] 
 theorem square_correspondence :
     Eval env [.prim .dup, .prim .mul] s r ↔ Shallow.square s = r := by
   cases s <;> simp [eval_prim, Prim.eval, Shallow.square, Shallow.seq,
-    Shallow.dup, Shallow.mul, Shallow.prim, eq_comm]
+    Shallow.dup, Shallow.mul, Shallow.bin, eq_comm]
 
 example : constantFold [.push 3, .push 4, .prim .add, .call "SQUARE"] =
     [.push 7, .call "SQUARE"] := rfl

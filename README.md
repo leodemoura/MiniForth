@@ -46,6 +46,29 @@ Global Lean definitions require explicit interpolation. These features construct
 syntax trees parameterized by Lean values; they do not add runtime variables to
 MiniForth.
 
+Importing `MiniForth.Syntax` also makes goals and messages display these
+quotations. For example, an equivalence goal reads:
+
+```text
+⊢ Equiv env [forth| a b +] [forth| b a +]
+```
+
+The printer handles bodies, declarations, whole programs, and nested conditionals.
+Long quotations wrap and indent to fit Lean's `pp.width`. Symbolic values keep
+their Lean bindings; calls use `CALL` or escaped names when needed. A known
+prefix with an unknown continuation prints as `List.append [forth| SQUARE] rest`.
+Using explicit list append preserves its meaning even with a custom `++` instance.
+Symbolic instructions or names that the quotation grammar cannot express retain
+ordinary Lean syntax. Named definitions remain named.
+
+Use `set_option pp.miniForth false` to inspect the underlying syntax trees during
+the course. The general options `pp.notation false` and `pp.explicit true` also
+disable Forth notation. The implementation separates parsing and elaboration in
+[`Quotation.lean`](MiniForth/Quotation.lean) from goal display in
+[`PrettyPrinter.lean`](MiniForth/PrettyPrinter.lean). The
+[printer tests](MiniForth/PrettyPrinterTests.lean) check that printed text parses
+and elaborates back to the same expression, including at narrow widths.
+
 The semantic choices are deliberate:
 
 - Integers are mathematical integers, not bounded machine words.
@@ -74,7 +97,7 @@ dictionary with successive redefinitions.
 2. **Shallow embedding.** Read `MiniForth/Shallow.lean`. A word is a Lean function;
    composition propagates errors. Prove `square_run` and use ordinary function
    equality to express equivalence. Explore the family of words built with `iterate`.
-3. **Deep embedding and syntax.** Read `Basic.lean`, `Syntax.lean`, and `Link.lean`.
+3. **Deep embedding and syntax.** Read `Basic.lean`, `Quotation.lean`, and `Link.lean`.
    The same word is now data. Inspect the AST and separate parsing, name checking,
    and execution. Explain that quotation is convenient notation, not a new semantics.
 4. **Big-step and small-step semantics.** Read `Deep.lean`. Big-step derivations
@@ -93,6 +116,10 @@ dictionary with successive redefinitions.
    successful termination (total correctness), partial correctness, and safety.
    Then read `Conditionals.lean`: its exact precondition shows how the required
    stack depth can depend on which branch is selected.
+7. **Automation.** Compare the original proofs with the corresponding files in
+   `MiniForth/Grind/`. Study which semantic rules are registered, then let `grind`
+   handle routine reasoning. Keep induction, useful contracts, and recursive-call
+   unfolding visible as choices made by the engineer.
 
 The order intentionally introduces declarations before recursion. The initial
 arithmetic examples need no recursive definitions; branching and recursion are
@@ -190,6 +217,112 @@ distributivity, duplication and push/drop rewrites, and combining two offsets:
 Another theorem reuses addition commutativity inside arbitrary surrounding code.
 The counterexample `0 +` versus an empty body shows where an arithmetic identity
 alone is insufficient: the addition can underflow.
+
+## A second pass with `grind`
+
+The original lessons remain unchanged. The files in
+[`MiniForth/Grind/`](MiniForth/Grind) give parallel proofs using a shared set of
+annotations in [`Rules.lean`](MiniForth/Grind/Rules.lean). For example:
+
+```lean
+import MiniForth.Syntax
+import MiniForth.Grind.Rules
+
+open MiniForth MiniForth.Deep
+
+example (env : Env) (a b : Int) :
+    Equiv env [forth| a b +] [forth| b a +] := by
+  grind
+```
+
+| Original lesson | Automated version |
+| --- | --- |
+| Shallow functions and algebra | [`Grind/Shallow.lean`](MiniForth/Grind/Shallow.lean) |
+| Program equivalence | [`Grind/ProgramEquivalence.lean`](MiniForth/Grind/ProgramEquivalence.lean) |
+| Arithmetic contracts and constant folding | [`Grind/Examples.lean`](MiniForth/Grind/Examples.lean) |
+| Weakest preconditions | [`Grind/WeakestPrecondition.lean`](MiniForth/Grind/WeakestPrecondition.lean) |
+| Conditional stack requirements | [`Grind/Conditionals.lean`](MiniForth/Grind/Conditionals.lean) |
+| Terminating recursion | [`Grind/Recursion.lean`](MiniForth/Grind/Recursion.lean) |
+| Divergence | [`Grind/Divergence.lean`](MiniForth/Grind/Divergence.lean) |
+
+The shared annotations expose generic semantic facts. Each lesson then proves its
+own contracts and can register them locally for subsequent proofs. For example,
+`square_step` describes a call to `SQUARE` with an arbitrary continuation;
+`cube_step` uses that contract. The equivalence of `a CUBE` and `a SQUARE a *`
+then follows with `by grind`, without expanding either dictionary entry again.
+
+`grind` combines these facts with equality reasoning, case analysis, and integer
+arithmetic. The program-equivalence file derives commutativity, associativity,
+distributivity, and stack rewrites directly. The conditional lesson also proves:
+
+```lean
+example : Equiv env [forth| DUP IF 1 + ELSE DROP 1 THEN] [forth| 1 +] := by
+  grind
+```
+
+Here the zero-branch condition explains why replacing the top value with `1`
+agrees with incrementing it. The proof also covers empty-stack underflow.
+
+The examples use several parts of the automation interface deliberately:
+
+| Feature | Purpose in MiniForth |
+| --- | --- |
+| `[grind norm]` | Normalize primitive operations and known recursive equations before theorem search. |
+| `[grind =]` | Apply a semantic equation or word contract when its left-hand side appears. |
+| `[grind unfold]` | Expose selected shallow definitions and the meaning of equivalence. |
+| `grind_pattern` with `=?=` | Decompose an instruction sequence specifically when it starts with a call. |
+| A multi-pattern with `guard` | Use a successful instruction's output only after its contract is known true and the enclosing instruction sequence appears. |
+| `[grind funCC]` | Reuse equality between function-valued shallow words at a particular input stack. |
+| `grind only => use ...` | Choose theorem instantiations explicitly in the divergence proof. |
+
+The shallow equations also demonstrate automatic function extensionality.
+`grind -funext` in the offset proofs disables speculative splits between function
+terms; the ordinary extensionality rule remains available.
+
+The shape of a rule matters. For primitive weakest preconditions, the automation
+interface computes the intermediate stack from the primitive result. This avoids
+asking proof search to discover that stack as an existential witness. The rule
+is proved from the original WP semantics.
+
+Induction is still explicit for iteration, factorial, divergence, and the constant
+folder. [`Tactics.lean`](MiniForth/Grind/Tactics.lean) defines `forth_unfold lookup`
+as a short macro over `rw` and `simp only`: it expands one call using a dictionary
+lookup proof and normalizes list append. The factorial proof is now:
+
+```lean
+  induction n generalizing s with
+  | zero =>
+    forth_unfold factorial_lookup
+    grind
+  | succ n ih =>
+    forth_unfold factorial_lookup
+    have recursive := ih ((n + 1 : Int) :: s)
+    grind
+```
+
+The chosen induction instance preserves the operand needed after the recursive
+call; the guarded sequencing rule connects its result to the continuation.
+Recursive dictionaries never unfold automatically. These examples use ordinary
+tactic limits.
+
+The divergence proof illustrates interactive automation: `use [→ run_complete]`
+derives a fuel witness from an assumed finite derivation, `cases_next` extracts
+that witness, and `use [= run_forever]` contradicts termination at that fuel.
+Use `show_state` or `show_cases` inside this script to inspect the reasoning.
+For other proofs, `grind?` suggests a smaller theorem list, and
+`set_option trace.grind.ematch.instance true in` displays theorem instantiations.
+
+For further reading, see the official documentation on
+[library annotations](https://lean-lang.org/doc/reference/latest/The--grind--tactic/Annotating-Libraries-for--grind/),
+[E-matching and pattern constraints](https://lean-lang.org/doc/reference/latest/The--grind--tactic/E___matching/),
+and [interactive mode](https://lean-lang.org/doc/reference/latest/The--grind--tactic/Interactive-Mode/).
+These are the latest reference pages; the features used here were also checked
+against the installed Lean v4.35.0 source and compiled with that toolchain.
+
+Import `MiniForth.Grind.Rules` to use the common annotations, or `MiniForth.Grind`
+to load the full automated lesson. The umbrella `MiniForth` import includes both
+sets of lessons, so `lake build` checks them together. The original lesson modules
+themselves do not import the automation rules.
 
 ## Contracts and equivalence
 

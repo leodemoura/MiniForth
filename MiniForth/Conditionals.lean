@@ -18,7 +18,7 @@ namespace MiniForth.Conditionals
 
 open Deep
 
-def addWhen : Shallow.Word := Shallow.branch Shallow.add Shallow.skip
+def addWhen : Shallow.Prog := Shallow.branch Shallow.add Shallow.skip
 
 def body : Body := [forth| IF + ELSE THEN]
 
@@ -39,7 +39,7 @@ theorem addWhen_zero (s : Stack) : addWhen (0 :: s) = .ok s := rfl
 /-- Every nonzero integer is true, and the unused suffix is preserved. -/
 theorem addWhen_nonzero (h : flag ≠ 0) (a b : Int) (s : Stack) :
     addWhen (flag :: b :: a :: s) = .ok ((a + b) :: s) := by
-  simp [addWhen, Shallow.branch, Shallow.add, Shallow.prim, Prim.eval, h]
+  simp [addWhen, Shallow.branch, Shallow.add, Shallow.bin, h]
 
 /-- Read a one-instruction conditional derivation in either direction. -/
 private theorem exec_branch : Exec env (.branch yes no) s r ↔
@@ -69,14 +69,19 @@ private theorem exec_branch : Exec env (.branch yes no) s r ↔
         | branchNonzero _ hb => exact hb
       · exact Exec.branchNonzero h
 
+theorem add_eq (s : Stack) : Prim.add.eval s = Shallow.add s := by
+  cases s with
+  | nil => rfl
+  | cons b tail => cases tail <;> rfl
+
+
 /-- The two embeddings agree on every stack and every outcome, including errors. -/
 theorem correspondence : Eval env body s r ↔ addWhen s = r := by
   cases s with
   | nil => simp [body, exec_branch, addWhen, Shallow.branch, eq_comm]
   | cons flag rest =>
     by_cases h : flag = 0 <;>
-      simp [body, exec_branch, addWhen, Shallow.branch, Shallow.add, Shallow.skip,
-        Shallow.prim, h, eq_comm]
+      simp [body, exec_branch, addWhen, Shallow.branch, Shallow.skip, add_eq, h, eq_comm]
 
 theorem call_correspondence :
     Eval program.env [forth| ADD-WHEN] s r ↔ addWhen s = r :=
