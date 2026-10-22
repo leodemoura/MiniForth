@@ -19,17 +19,11 @@ inductive LinkError where
 
 /-- All names called by a body, including both sides of each conditional. -/
 def Body.calls : Body → List String
-  | [] => []
-  | .push _ :: rest => Body.calls rest
-  | .prim _ :: rest => Body.calls rest
-  | .call name :: rest => name :: Body.calls rest
+  | []                     => []
+  | .push _ :: rest        => Body.calls rest
+  | .prim _ :: rest        => Body.calls rest
+  | .call name :: rest     => name :: Body.calls rest
   | .branch yes no :: rest => Body.calls yes ++ Body.calls no ++ Body.calls rest
-
-private def checkNames : List String → Except LinkError Unit
-  | [] => .ok ()
-  | name :: rest =>
-      if name ∈ rest then .error (.duplicateWord name)
-      else checkNames rest
 
 private def checkCalls (env : Env) : List String → Except LinkError Unit
   | [] => .ok ()
@@ -45,6 +39,12 @@ def Program.calls (p : Program) : List String :=
 /-- Linking checks names only: it does not imply termination or stack safety. -/
 def Program.WellFormed (p : Program) : Prop :=
   (p.decls.map Decl.name).Nodup ∧ ∀ name ∈ p.calls, p.env name ≠ none
+
+private def checkNames : List String → Except LinkError Unit
+  | [] => .ok ()
+  | name :: rest =>
+      if name ∈ rest then .error (.duplicateWord name)
+      else checkNames rest
 
 /-- Validate all declarations and main, then return their global dictionary. -/
 def Program.link (p : Program) : Except LinkError Env := do
