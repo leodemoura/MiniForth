@@ -1,8 +1,6 @@
 # MiniForth
 
-A small Lean development for teaching programming language semantics to experienced
-engineers taking their first steps in formal verification. It uses Lean **v4.35.0**
-and the standard library, with no external dependencies.
+A small Lean tutorial for programming language semantics.
 
 ```sh
 lake build
@@ -15,7 +13,7 @@ use; there is no need to learn all of Lean before meeting Forth.
 
 ## The language
 
-Declarations introduce words; the instructions after the declarations are the main
+Declarations introduce new Forth programs; the instructions after the declarations are the main
 body. In Lean, this is an ordinary term of type `Program`:
 
 ```lean
@@ -27,9 +25,9 @@ def arithmetic : Program := [forthProgram|
 ]
 ```
 
-The result is `[25]`. The head of a Lean list is the top of the stack. A word acts
+The result is `[25]`. The head of a Lean list is the top of the stack. A Forth program acts
 on an existing stack: `SQUARE` sends `x :: rest` to `x * x :: rest`, preserving
-the unused part. That statement is more useful than checking a few inputs.
+the unused part. 
 
 The language has integer literals, `+`, `-`, `*`, `=`, `DUP`, `SWAP`, `DROP`, word
 calls, and `IF ... ELSE ... THEN`. Quotation boundaries are explicit:
