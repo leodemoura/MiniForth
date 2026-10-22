@@ -29,17 +29,17 @@ The result is `[25]`. The head of a Lean list is the top of the stack. A Forth p
 on an existing stack: `SQUARE` sends `x :: rest` to `x * x :: rest`, preserving
 the unused part. 
 
-The language has integer literals, `+`, `-`, `*`, `=`, `DUP`, `SWAP`, `DROP`, word
-calls, and `IF ... ELSE ... THEN`. Quotation boundaries are explicit:
+The language has integer literals, `+`, `-`, `*`, `=`, `DUP`, `SWAP`, `DROP`, calls
+to named Forth programs, and `IF ... ELSE ... THEN`. Quotation boundaries are explicit:
 `[forth| DUP *]` is a body; `[forthDecl| : SQUARE DUP * ;]` is one declaration.
 Hyphenated names and negative literals are supported. Names use Lean identifier
 segments; use an escaped identifier such as `«SQUARE-2»` when a name contains a
 numeric segment or a reserved keyword. MiniForth names are case-sensitive.
 
 Inside a quotation, a name bound to a Lean local variable pushes its value as an
-integer; other names call Forth words. Use `{term}` to push a Lean expression,
-such as `{a + b}`, and `CALL name` to force a word call when names overlap.
-Primitives retain their meaning, and declaration names always name Forth words.
+integer; other names call Forth programs. Use `{term}` to push a Lean expression,
+such as `{a + b}`, and `CALL name` to force a call when names overlap.
+Primitives retain their meaning, and declaration names always name Forth programs.
 Global Lean definitions require explicit interpolation. These features construct
 syntax trees parameterized by Lean values; they do not add runtime variables to
 MiniForth.
@@ -76,8 +76,8 @@ The semantic choices are deliberate:
 - A program has one global dictionary. Forward references and recursion are allowed.
 - Linking rejects duplicate declarations and unresolved calls, including calls in
   unselected branches. Linking checks names, not stack safety or termination.
-- `LinkCorrectness.lean` proves that successful linking prevents unknown-word
-  runtime errors on every input stack.
+- `LinkCorrectness.lean` proves that successful linking prevents runtime errors
+  caused by calls to undeclared Forth programs on every input stack.
 - Direct evaluation of an unlinked body can report `unknownWord`. The semantics
   remains defined on malformed programs, which lets us state what validation buys us.
 - Exhausted fuel means “execution has not finished within this budget.” It is
@@ -92,16 +92,18 @@ dictionary with successive redefinitions.
 1. **Functions and contracts.** Trace the arithmetic example by hand. Introduce
    stacks, `Except`, pattern matching, and the difference between a computed example
    and a theorem quantified over every input and every unused stack suffix.
-2. **Shallow embedding.** Read `MiniForth/Shallow.lean`. A word is a Lean function;
-   composition propagates errors. Prove `square_run` and use ordinary function
-   equality to express equivalence. Explore the family of words built with `iterate`.
+2. **Shallow embedding.** Read `MiniForth/Shallow.lean`. A Forth program is a Lean
+   function; composition propagates errors. Prove `square_run` and use ordinary
+   function equality to express equivalence. Explore the family of Forth programs
+   built with `iterate`.
 3. **Deep embedding and syntax.** Read `Basic.lean`, `Quotation.lean`, and `Link.lean`.
-   The same word is now data. Inspect the AST and separate parsing, name checking,
-   and execution. Explain that quotation is convenient notation, not a new semantics.
+   The same Forth program is now data. Inspect the AST and separate parsing, name
+   checking, and execution. Explain that quotation is convenient notation, not a new semantics.
 4. **Big-step and small-step semantics.** Read `Deep.lean`. Big-step derivations
    describe completed computations; small steps expose each transition. Follow a
-   call and a branch, then a recursive word. Connect the relations to the executable
-   evaluator and explain why a fuel limit does not define the language's meaning.
+   call and a branch, then a recursive Forth program. Connect the relations to the
+   executable evaluator and explain why a fuel limit does not define the
+   language's meaning.
    `Recursion.lean` proves factorial correct for every natural input;
    `Divergence.lean` proves that `FOREVER` never produces any result.
 5. **Program equivalence.** Start with `ProgramEquivalence.lean`: prove familiar
@@ -135,9 +137,9 @@ and work with the smaller program proofs in `Shallow.lean` and `Examples.lean`.
 
 | Question | Shallow embedding | Deep embedding |
 | --- | --- | --- |
-| What is a word? | A Lean function `Stack → Result` | An instruction list interpreted in a dictionary |
+| What is a Forth program? | A Lean function `Stack → Result` | An instruction list interpreted in a dictionary |
 | Who resolves a call? | Lean resolves an identifier | The language resolves a string in `Env` |
-| How do we build word families? | Ordinary higher-order functions and natural-number recursion | Functions that generate syntax |
+| How do we build families of Forth programs? | Ordinary higher-order functions and natural-number recursion | Functions that generate syntax |
 | How do we prove arithmetic behavior? | Unfold functions, simplify, reason about integers | Invert or construct semantic derivations, then reason about integers |
 | How do we inspect or transform a program? | No object-language AST is provided by this representation | Pattern match on constructors and prove the transformation correct |
 | How do we show execution progress? | Function application gives a result | Small-step configurations expose remaining code and the stack |
@@ -148,7 +150,7 @@ The examples make these differences observable:
 
 - `square`, `cube`, and `sumOfSquares` reuse ordinary Lean definitions in the shallow
   embedding. There is no string lookup or separate linker.
-- A shallow `iterate n word` demonstrates host-language abstraction. The host can
+- A shallow `iterate n prog` demonstrates host-language abstraction. The host can
   supply features beyond the MiniForth grammar, so decide which features a model
   intends to expose before treating every shallow term as a MiniForth program.
 - The deep arithmetic program uses Forth declarations and calls. Changing a call
@@ -156,9 +158,9 @@ The examples make these differences observable:
   elaboration error. Forward references do not depend on declaration order.
 - Constant folding examines deep syntax and comes with a theorem about behavior.
   An AST enables this proof; it does not make the proof automatic.
-- A deep recursive word can run forever. A finite run with no result is only an
-  observation about that run. A divergent Lean function cannot simply be admitted
-  as an ordinary total shallow word.
+- A deeply embedded recursive Forth program can run forever. A finite run with no
+  result is only an observation about that run. A divergent Lean function cannot
+  simply be admitted as an ordinary total shallow Forth program.
 
 The executable prints both arithmetic results, conditional addition, factorial,
 validation errors, underflow, an exhausted run, and a small-step trace of `3 SQUARE`.
@@ -186,7 +188,7 @@ stack; it cannot hold for a deep environment with a divergent call.
 [`Conditionals.lean`](MiniForth/Conditionals.lean) pairs these definitions:
 
 ```lean
-def addWhen : Shallow.Word := Shallow.branch Shallow.add Shallow.skip
+def addWhen : Shallow.Prog := Shallow.branch Shallow.add Shallow.skip
 
 def program : Program := [forthProgram|
   : ADD-WHEN IF + ELSE THEN ;
@@ -284,11 +286,11 @@ The examples use several parts of the automation interface deliberately:
 | Feature | Purpose in MiniForth |
 | --- | --- |
 | `[grind norm]` | Normalize primitive operations and known recursive equations before theorem search. |
-| `[grind =]` | Apply a semantic equation or word contract when its left-hand side appears. |
+| `[grind =]` | Apply a semantic equation or Forth program contract when its left-hand side appears. |
 | `[grind unfold]` | Expose selected shallow definitions and the meaning of equivalence. |
 | `grind_pattern` with `=?=` | Decompose an instruction sequence specifically when it starts with a call. |
 | A multi-pattern with `guard` | Use a successful instruction's output only after its contract is known true and the enclosing instruction sequence appears. |
-| `[grind funCC]` | Reuse equality between function-valued shallow words at a particular input stack. |
+| `[grind funCC]` | Reuse equality between shallowly embedded Forth programs at a particular input stack. |
 | `grind only => use ...` | Choose theorem instantiations explicitly in the divergence proof. |
 
 The shallow equations also demonstrate automatic function extensionality.
