@@ -33,13 +33,13 @@ def SafeWLP (env : Env) (code : Body) (Q : Assertion) : Assertion := fun s =>
   Safe env code s ∧ WLP env code Q s
 
 /-- Every sufficient precondition implies WP; WP itself is sufficient. -/
-theorem wp_weakest :
-    Hoare env P code Q ↔ ∀ s, P s → WP env code Q s := Iff.rfl
+theorem wp_weakest : Hoare env P code Q ↔ ∀ s, P s → WP env code Q s :=
+  Iff.rfl
 
-theorem wp_valid : Hoare env (WP env code Q) code Q := fun _ h => h
+theorem wp_valid : Hoare env (WP env code Q) code Q :=
+  fun _ h => h
 
-theorem wp_mono (h : ∀ s, Q s → R s) :
-    ∀ s, WP env code Q s → WP env code R s := by
+theorem wp_mono (h : ∀ s, Q s → R s) : ∀ s, WP env code Q s → WP env code R s := by
   rintro s ⟨t, ht, hQ⟩
   exact ⟨t, ht, h t hQ⟩
 
@@ -52,8 +52,7 @@ theorem wp_mono (h : ∀ s, Q s → R s) :
     exact ⟨s, .nil, h⟩
 
 /-- Work backwards: the precondition for `b` becomes the postcondition for `a`. -/
-theorem wp_append {a b : Body} :
-    WP env (a ++ b) Q s ↔ WP env a (WP env b Q) s := by
+theorem wp_append {a b : Body} : WP env (a ++ b) Q s ↔ WP env a (WP env b Q) s := by
   constructor
   · rintro ⟨t, h, ht⟩
     rcases eval_append.mp h with ⟨u, ha, hb⟩ | ⟨e, _, he⟩
@@ -62,21 +61,19 @@ theorem wp_append {a b : Body} :
   · rintro ⟨u, ha, t, hb, ht⟩
     exact ⟨t, eval_append.mpr (Or.inl ⟨u, ha, hb⟩), ht⟩
 
-theorem hoare_seq {a b : Body} (ha : Hoare env P a R) (hb : Hoare env R b Q) :
-    Hoare env P (a ++ b) Q := by
+theorem hoare_seq {a b : Body} (ha : Hoare env P a R) (hb : Hoare env R b Q) : Hoare env P (a ++ b) Q := by
   intro s hs
   apply wp_append.mpr
   exact wp_mono hb s (ha s hs)
 
 theorem hoare_consequence (hP : ∀ s, P' s → P s)
-    (h : Hoare env P code Q) (hQ : ∀ s, Q s → Q' s) :
-    Hoare env P' code Q' := by
+    (h : Hoare env P code Q) (hQ : ∀ s, Q s → Q' s)
+    : Hoare env P' code Q' := by
   intro s hs
   exact wp_mono hQ s (h s (hP s hs))
 
 /-- A single instruction must succeed before its continuation can run. -/
-theorem wp_cons : WP env (i :: rest) Q s ↔
-    ∃ t, Exec env i s (.ok t) ∧ WP env rest Q t := by
+theorem wp_cons : WP env (i :: rest) Q s ↔ ∃ t, Exec env i s (.ok t) ∧ WP env rest Q t := by
   constructor
   · rintro ⟨u, h, hu⟩
     cases h with
@@ -84,8 +81,7 @@ theorem wp_cons : WP env (i :: rest) Q s ↔
   · rintro ⟨t, hi, u, hr, hu⟩
     exact ⟨u, .consOk hi hr, hu⟩
 
-@[simp] theorem wp_push :
-    WP env (.push n :: rest) Q s ↔ WP env rest Q (n :: s) := by
+@[simp] theorem wp_push : WP env (.push n :: rest) Q s ↔ WP env rest Q (n :: s) := by
   rw [wp_cons]
   constructor
   · rintro ⟨t, hi, ht⟩
@@ -94,8 +90,7 @@ theorem wp_cons : WP env (i :: rest) Q s ↔
   · intro h
     exact ⟨_, .push, h⟩
 
-theorem wp_prim : WP env (.prim op :: rest) Q s ↔
-    ∃ t, op.eval s = .ok t ∧ WP env rest Q t := by
+theorem wp_prim : WP env (.prim op :: rest) Q s ↔ ∃ t, op.eval s = .ok t ∧ WP env rest Q t := by
   rw [wp_cons]
   constructor
   · rintro ⟨t, hi, ht⟩
@@ -105,8 +100,7 @@ theorem wp_prim : WP env (.prim op :: rest) Q s ↔
   · rintro ⟨t, hi, ht⟩
     exact ⟨t, by simpa only [hi] using (Exec.prim (env := env) (op := op) (s := s)), ht⟩
 
-theorem wp_call (lookup : env name = some body) :
-    WP env (.call name :: rest) Q s ↔ WP env body (WP env rest Q) s := by
+theorem wp_call (lookup : env name = some body) : WP env (.call name :: rest) Q s ↔ WP env body (WP env rest Q) s := by
   rw [wp_cons]
   constructor
   · rintro ⟨t, hi, ht⟩
@@ -117,9 +111,8 @@ theorem wp_call (lookup : env name = some body) :
   · rintro ⟨t, hb, ht⟩
     exact ⟨t, .call lookup hb, ht⟩
 
-@[simp] theorem wp_branch_zero :
-    WP env (.branch yes no :: rest) Q (0 :: s) ↔
-      WP env no (WP env rest Q) s := by
+@[simp] theorem wp_branch_zero
+    : WP env (.branch yes no :: rest) Q (0 :: s) ↔ WP env no (WP env rest Q) s := by
   rw [wp_cons]
   constructor
   · rintro ⟨t, hi, ht⟩
@@ -129,9 +122,8 @@ theorem wp_call (lookup : env name = some body) :
   · rintro ⟨t, hb, ht⟩
     exact ⟨t, .branchZero hb, ht⟩
 
-theorem wp_branch_nonzero (hn : n ≠ 0) :
-    WP env (.branch yes no :: rest) Q (n :: s) ↔
-      WP env yes (WP env rest Q) s := by
+theorem wp_branch_nonzero (hn : n ≠ 0)
+    : WP env (.branch yes no :: rest) Q (n :: s) ↔ WP env yes (WP env rest Q) s := by
   rw [wp_cons]
   constructor
   · rintro ⟨t, hi, ht⟩
@@ -141,8 +133,7 @@ theorem wp_branch_nonzero (hn : n ≠ 0) :
   · rintro ⟨t, hb, ht⟩
     exact ⟨t, .branchNonzero hn hb, ht⟩
 
-@[simp] theorem wp_branch_empty :
-    ¬ WP env (.branch yes no :: rest) Q [] := by
+@[simp] theorem wp_branch_empty : ¬ WP env (.branch yes no :: rest) Q [] := by
   rw [wp_cons]
   rintro ⟨t, hi, _⟩
   cases hi
