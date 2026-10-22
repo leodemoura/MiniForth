@@ -72,7 +72,7 @@ private theorem resolved_lookup (h : p.WellFormed)
   cases hf : p.decls.find? (fun d => d.name == name) with
   | none => simp [hf] at lookup
   | some decl =>
-      simp only [hf, Option.map_some, Option.some.injEq] at lookup
+      simp only [hf, Option.some.injEq] at lookup
       subst body
       intro called hc
       apply h.2 called
