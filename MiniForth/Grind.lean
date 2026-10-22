@@ -5,5 +5,6 @@ import MiniForth.Grind.ProgramEquivalence
 import MiniForth.Grind.Examples
 import MiniForth.Grind.Divergence
 import MiniForth.Grind.WeakestPrecondition
+import MiniForth.Grind.VerificationConditions
 import MiniForth.Grind.Conditionals
 import MiniForth.Grind.Recursion

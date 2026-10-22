@@ -136,6 +136,75 @@ grind_pattern eval_cons => Eval env (i :: rest) s r where
   rw [wp_prim]
   cases h : op.eval s <;> simp
 
+/-! These equations expose stack requirements directly for WP simplification. -/
+
+theorem wp_add : WP env (.prim .add :: rest) Q s ↔
+    match s with
+    | b :: a :: tail => WP env rest Q ((a + b) :: tail)
+    | _ => False := by
+  cases s with
+  | nil => simp [wp_prim_result, Prim.eval]
+  | cons b tail => cases tail <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_sub : WP env (.prim .sub :: rest) Q s ↔
+    match s with
+    | b :: a :: tail => WP env rest Q ((a - b) :: tail)
+    | _ => False := by
+  cases s with
+  | nil => simp [wp_prim_result, Prim.eval]
+  | cons b tail => cases tail <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_mul : WP env (.prim .mul :: rest) Q s ↔
+    match s with
+    | b :: a :: tail => WP env rest Q (a * b :: tail)
+    | _ => False := by
+  cases s with
+  | nil => simp [wp_prim_result, Prim.eval]
+  | cons b tail => cases tail <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_dup : WP env (.prim .dup :: rest) Q s ↔
+    match s with
+    | [] => False
+    | a :: tail => WP env rest Q (a :: a :: tail) := by
+  cases s <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_swap : WP env (.prim .swap :: rest) Q s ↔
+    match s with
+    | b :: a :: tail => WP env rest Q (a :: b :: tail)
+    | _ => False := by
+  cases s with
+  | nil => simp [wp_prim_result, Prim.eval]
+  | cons b tail => cases tail <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_drop : WP env (.prim .drop :: rest) Q s ↔
+    match s with
+    | [] => False
+    | _ :: tail => WP env rest Q tail := by
+  cases s <;> simp [wp_prim_result, Prim.eval]
+
+theorem wp_eq : WP env (.prim .eq :: rest) Q s ↔
+    match s with
+    | b :: a :: tail => WP env rest Q ((if a = b then -1 else 0) :: tail)
+    | _ => False := by
+  cases s with
+  | nil => simp [wp_prim_result, Prim.eval]
+  | cons b tail => cases tail <;> simp [wp_prim_result, Prim.eval]
+
+/-- Compute both conditional preconditions while retaining the flag test. -/
+theorem wp_branch_result : WP env (.branch yes no :: rest) Q s ↔
+    match s with
+    | [] => False
+    | flag :: tail =>
+        if flag = 0 then WP env no (WP env rest Q) tail
+        else WP env yes (WP env rest Q) tail := by
+  cases s with
+  | nil => simp
+  | cons flag tail =>
+    by_cases h : flag = 0
+    · subst flag
+      simp
+    · simp [h, wp_branch_nonzero h]
+
 /-- A conditional exposes just the selected branch and consumes its flag. -/
 @[grind =] theorem exec_branch : Exec env (.branch yes no) s r ↔
     match s with
