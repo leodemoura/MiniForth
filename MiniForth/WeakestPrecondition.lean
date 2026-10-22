@@ -52,7 +52,7 @@ theorem wp_mono (h : ∀ s, Q s → R s) :
     exact ⟨s, .nil, h⟩
 
 /-- Work backwards: the precondition for `b` becomes the postcondition for `a`. -/
-theorem wp_append :
+theorem wp_append {a b : Body} :
     WP env (a ++ b) Q s ↔ WP env a (WP env b Q) s := by
   constructor
   · rintro ⟨t, h, ht⟩
@@ -62,7 +62,7 @@ theorem wp_append :
   · rintro ⟨u, ha, t, hb, ht⟩
     exact ⟨t, eval_append.mpr (Or.inl ⟨u, ha, hb⟩), ht⟩
 
-theorem hoare_seq (ha : Hoare env P a R) (hb : Hoare env R b Q) :
+theorem hoare_seq {a b : Body} (ha : Hoare env P a R) (hb : Hoare env R b Q) :
     Hoare env P (a ++ b) Q := by
   intro s hs
   apply wp_append.mpr
@@ -147,7 +147,7 @@ theorem wp_branch_nonzero (hn : n ≠ 0) :
   rintro ⟨t, hi, _⟩
   cases hi
 
-theorem wp_equiv (h : Equiv env a b) : WP env a Q s ↔ WP env b Q s := by
+theorem wp_equiv {a b : Body} (h : Equiv env a b) : WP env a Q s ↔ WP env b Q s := by
   unfold Equiv at h
   simp only [WP, h]
 

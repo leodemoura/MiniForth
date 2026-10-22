@@ -38,7 +38,7 @@ private theorem eval_no_unknown
     (h : Eval env code s r) :
     Resolved env code → ∀ name, r ≠ .error (.unknownWord name) := by
   induction h using Eval.rec
-      (motive_2 := fun i _ r _ => Resolved env [i] →
+      (motive_1 := fun i _ r _ => Resolved env [i] →
         ∀ name, r ≠ .error (.unknownWord name)) with
   | nil => exact fun _ _ h => nomatch h
   | consOk _ _ _ ihR =>

@@ -54,19 +54,19 @@ theorem eval_call (h : env name = some body) :
 
 @[refl] theorem Equiv.refl (code : Body) : Equiv env code code := fun _ _ => Iff.rfl
 
-@[symm] theorem Equiv.symm (h : Equiv env a b) : Equiv env b a :=
+@[symm] theorem Equiv.symm {a b : Body} (h : Equiv env a b) : Equiv env b a :=
   fun s r => (h s r).symm
 
-theorem Equiv.trans (h₁ : Equiv env a b) (h₂ : Equiv env b c) :
+theorem Equiv.trans {a b c : Body} (h₁ : Equiv env a b) (h₂ : Equiv env b c) :
     Equiv env a c := fun s r => (h₁ s r).trans (h₂ s r)
 
-theorem Equiv.append (h₁ : Equiv env a b) (h₂ : Equiv env c d) :
+theorem Equiv.append {a b c d : Body} (h₁ : Equiv env a b) (h₂ : Equiv env c d) :
     Equiv env (a ++ c) (b ++ d) := by
   unfold Equiv at h₁ h₂ ⊢
   intro s r
   simp only [eval_append, h₁, h₂]
 
-theorem Equiv.cons (h : Equiv env a b) (i : Instr) : Equiv env (i :: a) (i :: b) := by
+theorem Equiv.cons {a b : Body} (h : Equiv env a b) (i : Instr) : Equiv env (i :: a) (i :: b) := by
   unfold Equiv at h ⊢
   intro s r
   simp only [eval_cons, h]

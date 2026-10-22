@@ -5,6 +5,7 @@ import MiniForth.Link
 import MiniForth.Deep
 import MiniForth.LinkCorrectness
 import MiniForth.Equivalence
+import MiniForth.Denote
 import MiniForth.ProgramEquivalence
 import MiniForth.WeakestPrecondition
 import MiniForth.Divergence

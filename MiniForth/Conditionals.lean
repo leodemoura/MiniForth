@@ -9,16 +9,17 @@ ADD-WHEN consumes a flag. If it is nonzero, add the next two values; otherwise
 leave the rest of the stack alone. Thus `[0]` succeeds, but `[-1]` underflows.
 Requiring three stack entries on every input would be sufficient, but too strong.
 
-The shallow word reuses Lean functions. The deep word exposes a conditional in
+The shallow embedding reuses Lean functions. The deep embedding exposes a conditional in
 its syntax, letting us express and verify a rewrite that negates the condition
-and swaps the branches. Neither representation makes stack safety automatic.
+and swaps the branches.
 -/
 
 namespace MiniForth.Conditionals
 
 open Deep
 
-def addWhen : Shallow.Prog := Shallow.branch Shallow.add Shallow.skip
+open Shallow
+def addWhen : Prog := branch add skip
 
 def body : Body := [forth| IF + ELSE THEN]
 
@@ -28,6 +29,10 @@ def program : Program := [forthProgram|
 ]
 
 #eval addWhen [-1, 20, 10]
+
+open Shallow in
+#eval run (push 20 >>> push 10 >>> push (-1) >>> addWhen)
+
 #eval runMain program
 
 theorem program_wellFormed : program.WellFormed := by

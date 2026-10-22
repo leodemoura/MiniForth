@@ -3,19 +3,13 @@ import MiniForth.Basic
 /-!
 # Deep embedding
 
-Words, including recursive words, are data. Big-step semantics describes finite
-executions; a computation that runs forever has no big-step derivation. Errors
-are explicit results and therefore cannot be confused with nontermination.
+Forth programs are data. Big-step semantics describes finite
+executions; a computation that runs forever has no big-step derivation.
 -/
 
 namespace MiniForth.Deep
 
 mutual
-  inductive Eval (env : Env) : Body → Stack → Result → Prop where
-    | nil : Eval env [] s (.ok s)
-    | consOk : Exec env i s (.ok t) → Eval env rest t r → Eval env (i :: rest) s r
-    | consError : Exec env i s (.error e) → Eval env (i :: rest) s (.error e)
-
   inductive Exec (env : Env) : Instr → Stack → Result → Prop where
     | push : Exec env (.push n) s (.ok (n :: s))
     | prim : Exec env (.prim op) s (op.eval s)
@@ -24,6 +18,11 @@ mutual
     | branchZero : Eval env no s r → Exec env (.branch yes no) (0 :: s) r
     | branchNonzero : n ≠ 0 → Eval env yes s r → Exec env (.branch yes no) (n :: s) r
     | branchUnderflow : Exec env (.branch yes no) [] (.error .stackUnderflow)
+
+  inductive Eval (env : Env) : Body → Stack → Result → Prop where
+    | nil : Eval env [] s (.ok s)
+    | consOk : Exec env i s (.ok t) → Eval env rest t r → Eval env (i :: rest) s r
+    | consError : Exec env i s (.error e) → Eval env (i :: rest) s (.error e)
 end
 
 @[simp] theorem eval_nil : Eval env [] s r ↔ r = .ok s := by
@@ -44,7 +43,7 @@ theorem eval_cons : Eval env (i :: rest) s r ↔
     · exact .consError hi
 
 /-- Sequential composition propagates failures and continues after success. -/
-theorem eval_append : Eval env (a ++ b) s r ↔
+theorem eval_append {a b : Body} : Eval env (a ++ b) s r ↔
     (∃ t, Eval env a s (.ok t) ∧ Eval env b t r) ∨
     (∃ e, Eval env a s (.error e) ∧ r = .error e) := by
   induction a generalizing s r with
@@ -113,15 +112,7 @@ private def Config.append (c : Config) (rest : Body) : Config :=
 
 private theorem Step.append (h : Step env c d) :
     Step env (c.append rest) (d.append rest) := by
-  cases h <;> simp only [Config.append, List.cons_append, List.append_assoc]
-  · exact .push
-  · exact .primOk ‹_›
-  · exact .primError ‹_›
-  · exact .call ‹_›
-  · exact .unknown ‹_›
-  · exact .branchZero
-  · exact .branchNonzero ‹_›
-  · exact .branchUnderflow
+  cases h <;> simp only [Config.append, List.cons_append, List.append_assoc] <;> constructor <;> assumption
 
 private theorem Steps.append (h : Steps env c d) :
     Steps env (c.append rest) (d.append rest) := by
@@ -132,7 +123,7 @@ private theorem Steps.append (h : Steps env c d) :
 theorem eval_steps (h : Eval env code s r) :
     Steps env (.run code s) (terminal r) := by
   induction h using Eval.rec
-      (motive_2 := fun i s r _ => Steps env (.run [i] s) (terminal r)) with
+      (motive_1 := fun i s r _ => Steps env (.run [i] s) (terminal r)) with
   | nil => exact .refl
   | @consOk i s t rest r hi hr ihI ihR =>
     have h := ihI.append (rest := rest)
@@ -210,7 +201,7 @@ theorem eval_iff_steps : Eval env code s r ↔ Steps env (.run code s) (terminal
 
 theorem eval_deterministic (h₁ : Eval env code s r₁) (h₂ : Eval env code s r₂) : r₁ = r₂ := by
   induction h₁ using Eval.rec
-      (motive_2 := fun i s r _ => ∀ r', Exec env i s r' → r = r') generalizing r₂ with
+      (motive_1 := fun i s r _ => ∀ r', Exec env i s r' → r = r') generalizing r₂ with
   | nil => cases h₂; rfl
   | consOk hi hr ihI ihR =>
     cases h₂ with
