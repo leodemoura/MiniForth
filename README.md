@@ -109,12 +109,16 @@ dictionary with successive redefinitions.
    local optimization, and lift it through sequencing. Compare `SWAP SWAP` with
    the empty body, including short input stacks. Discuss why a correct optimizer
    must preserve failures.
-6. **Weakest preconditions.** Read `WeakestPrecondition.lean` and the worked
+6. **Connecting the embeddings.** Read [`Denote.lean`](MiniForth/Denote.lean).
+   Translate deeply embedded Forth programs into shallow functions using `denote`.
+   Supply the meanings of calls through `prog`, prove correspondence under
+   `CallsAgree`, and transfer shallow function equalities to deep program equivalences.
+7. **Weakest preconditions.** Read `WeakestPrecondition.lean` and the worked
    contracts in `Examples.lean`. Calculate backwards through a sequence. Separate
    successful termination (total correctness), partial correctness, and safety.
    Then read `Conditionals.lean`: its exact precondition shows how the required
    stack depth can depend on which branch is selected.
-7. **Automation.** Compare the original proofs with the corresponding files in
+8. **Automation.** Compare the original proofs with the corresponding files in
    `MiniForth/Grind/`. Study which semantic rules are registered, then let `grind`
    handle routine reasoning. Keep induction, useful contracts, and recursive-call
    unfolding visible as choices made by the engineer.
@@ -162,6 +166,20 @@ validation errors, underflow, an exhausted run, and a small-step trace of `3 SQU
 These are tradeoffs of the chosen representations, not claims that shallow
 embeddings can never have custom notation or model divergence. For example, a
 different shallow embedding could use relations or explicit partial computations.
+
+[`Denote.lean`](MiniForth/Denote.lean) connects the two representations.
+`denote prog code` translates a deeply embedded Forth program into a `Shallow.Prog`.
+It maps primitives to their independent shallow implementations, sequences to
+composition, and conditionals to `Shallow.branch`. The supplied
+`prog : String → Shallow.Prog` gives the meanings of named Forth programs.
+
+`denote_append` proves that concatenation becomes composition. Under
+`CallsAgree env prog`, `denote_correct` relates the resulting function to big-step
+evaluation, including errors, and `equiv_iff_denote_eq` relates deep equivalence to
+function equality. The examples translate `SQUARE`, `CUBE`, and a conditional,
+then reuse `Shallow.double_eq` to prove `DUP +` equivalent to `2 *`.
+The call agreement assumption requires every call to return a result on every
+stack; it cannot hold for a deep environment with a divergent call.
 
 ## A conditional example
 
