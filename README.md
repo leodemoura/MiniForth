@@ -259,6 +259,7 @@ example (env : Env) (a b : Int) :
 | Program equivalence | [`Grind/ProgramEquivalence.lean`](MiniForth/Grind/ProgramEquivalence.lean) |
 | Arithmetic contracts and constant folding | [`Grind/Examples.lean`](MiniForth/Grind/Examples.lean) |
 | Weakest preconditions | [`Grind/WeakestPrecondition.lean`](MiniForth/Grind/WeakestPrecondition.lean) |
+| Hoare triples and verification conditions | [`Grind/VerificationConditions.lean`](MiniForth/Grind/VerificationConditions.lean) |
 | Conditional stack requirements | [`Grind/Conditionals.lean`](MiniForth/Grind/Conditionals.lean) |
 | Terminating recursion | [`Grind/Recursion.lean`](MiniForth/Grind/Recursion.lean) |
 | Divergence | [`Grind/Divergence.lean`](MiniForth/Grind/Divergence.lean) |
@@ -280,6 +281,26 @@ example : Equiv env [forth| DUP IF 1 + ELSE DROP 1 THEN] [forth| 1 +] := by
 
 Here the zero-branch condition explains why replacing the top value with `1`
 agrees with incrementing it. The proof also covers empty-stack underflow.
+
+For a Hoare triple, `forth_wp` applies the WP rules and leaves the resulting
+verification condition. Import `MiniForth.Grind.Tactics` to use it:
+
+```lean
+example (env : Env) (n : Int) :
+    Hoare env (fun s => s = [n + 1]) [forth| DUP *]
+      (fun s => s = [n * n + 2 * n + 1]) := by
+  forth_wp
+  -- ⊢ (n + 1) * (n + 1) = n * n + 2 * n + 1
+  grind
+```
+
+The tactic also handles standalone WP goals, symbolic stack shapes, and
+conditionals. It uses proved equations and `simp`, which may close trivial
+conditions immediately. `forth_wp [body, contract]` can unfold a named program
+body or use an exact WP contract. A Hoare theorem alone gives a sufficient
+precondition, rather than an exact WP equation. Calls without supplied contracts
+remain WP obligations; `rw [wp_call lookup]` expands one call explicitly.
+Recursive Forth programs still require induction and a termination argument.
 
 The examples use several parts of the automation interface deliberately:
 
