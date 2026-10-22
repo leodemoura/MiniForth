@@ -19,7 +19,7 @@ expanding the recursive call. Recursive proofs still need induction and a
 termination argument.
 
 These macros use syntax quotation and ordinary Lean tactics; they add no semantic
-rules. Their expansions are deliberately short enough to inspect during the course.
+rules. Their expansions are deliberately short enough to inspect during the tutorial.
 -/
 
 namespace MiniForth.Grind

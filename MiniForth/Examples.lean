@@ -4,7 +4,7 @@ import MiniForth.WeakestPrecondition
 import MiniForth.Divergence
 
 /-!
-# Worked examples for the course
+# Worked examples for the tutorial
 
 Read the declarations first, then compare the same words in `Shallow.lean`.
 Computed examples establish individual facts; the quantified theorems below

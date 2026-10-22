@@ -60,7 +60,7 @@ Symbolic instructions or names that the quotation grammar cannot express retain
 ordinary Lean syntax. Named definitions remain named.
 
 Use `set_option pp.miniForth false` to inspect the underlying syntax trees during
-the course. The general options `pp.notation false` and `pp.explicit true` also
+the tutorial. The general options `pp.notation false` and `pp.explicit true` also
 disable Forth notation. The implementation separates parsing and elaboration in
 [`Quotation.lean`](MiniForth/Quotation.lean) from goal display in
 [`PrettyPrinter.lean`](MiniForth/PrettyPrinter.lean). The
@@ -87,7 +87,7 @@ This is a teaching language inspired by Forth, not an implementation of a Forth
 standard. In particular, its global dictionary does not model an interactive
 dictionary with successive redefinitions.
 
-## Suggested course sequence
+## Suggested tutorial sequence
 
 1. **Functions and contracts.** Trace the arithmetic example by hand. Introduce
    stacks, `Except`, pattern matching, and the difference between a computed example
